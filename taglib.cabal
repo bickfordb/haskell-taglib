@@ -3,7 +3,7 @@ Maintainer:     Brandon Bickford <bickfordb@gmail.com>
 Name:           taglib
 Version:        0.1.0
 Cabal-Version:  >= 1.2
-License:        LGPL
+License:        LGPL V3
 License-File:   LICENSE
 Category:       Sound
 Copyright:      (c) 2008 by Brandon Bickford
