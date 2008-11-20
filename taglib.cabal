@@ -1,9 +1,10 @@
 Author:         Brandon Bickford
-Maintainer:     bickfordb@gmail.com
+Maintainer:     Brandon Bickford <bickfordb@gmail.com>
 Name:           taglib
 Version:        0.1.0
 Cabal-Version:  >= 1.2
 License:        LGPL
+License-File:   LICENSE
 Category:       Sound
 Copyright:      (c) 2008 by Brandon Bickford
 Synopsis:       Haskell binding to TagLib
@@ -21,7 +22,6 @@ Library
   Build-Depends: base, bytestring, utf8-string
   Extensions: ForeignFunctionInterface, CPP
   Hs-Source-Dirs: src
-
   Extra-libraries: tag_c
   extra-lib-dirs: /usr/local/lib, /opt/local/lib
 
