@@ -42,7 +42,6 @@ showTag tag = do
     TagLib.setAlbum tag album
     TagLib.setTitle tag title
     TagLib.setComment tag comment
-    TagLib.saveTagFile file
     --}
 
 showAudioProperties :: TagLib.AudioProperties -> IO ()
