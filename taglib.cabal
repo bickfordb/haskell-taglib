@@ -3,14 +3,18 @@ Maintainer:     bickfordb@gmail.com
 Name:           taglib
 Version:        0.0.1
 Cabal-Version:  >= 1.2
-License:        BSD3
+License:        LGPL
 Category:       Utils
 Copyright:      (c) 2008 by Brandon Bickford
 Synopsis:       Haskell binding to TagLib
 Description:
   This is a Haskell binding to TagLib, a popular library for reading and writing tags of media files.
+  see TagLib: http://developer.kde.org/~wheeler/taglib.html
 
 Build-Type:     Simple
+Extra-Source-Files:
+    example.hs
+    README
 
 Library 
   Exposed-Modules: Sound.TagLib

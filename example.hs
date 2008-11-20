@@ -17,13 +17,17 @@ withMaybe mebbe action = do
         Nothing -> return ()
 
 showFile filename = do
-    t <- TagLib.openTagFile filename
+    t <- TagLib.open filename
     withMaybe t showTagFile
 
+showTagFile :: TagLib.TagFile -> IO ()
 showTagFile tagFile = do
-    t <- TagLib.openTag tagFile
+    t <- TagLib.tag tagFile
     withMaybe t showTag
+    p <- TagLib.audioProperties tagFile
+    withMaybe p showAudioProperties 
 
+showTag :: TagLib.Tag -> IO ()
 showTag tag = do 
     artist <- TagLib.artist tag
     album <- TagLib.album tag
@@ -32,23 +36,20 @@ showTag tag = do
     year <- TagLib.year tag
     track <- TagLib.track tag
     print (artist, album, title, year, track)
+    {--
     TagLib.setArtist tag "Blah"
+    TagLib.setArtist tag "blah"
+    TagLib.setAlbum tag album
+    TagLib.setTitle tag title
+    TagLib.setComment tag comment
+    TagLib.saveTagFile file
+    --}
 
---    setArtist tag "blah"
---    setAlbum tag album
---    setTitle tag title
---    setComment tag comment
---        saveTagFile file
---        p <- getAudioProperties file
---        case p of 
---            Nothing -> return () 
---            Just props -> do
---                bitrate <- getBitrate props
---                length <- getLength props
---                samplerate <- getSampleRate props
---                channels <- getChannels props
---                print bitrate
---                print length
---                print channels
---                print samplerate
+showAudioProperties :: TagLib.AudioProperties -> IO ()
+showAudioProperties props = do
+    bitrate <- TagLib.bitRate props
+    length <- TagLib.duration props
+    samplerate <- TagLib.sampleRate props
+    channels <- TagLib.channels props
+    print (bitrate, length, channels, samplerate)
 

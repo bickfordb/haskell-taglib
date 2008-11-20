@@ -1,13 +1,21 @@
 module Sound.TagLib (
+    AudioProperties,
     Tag,
-    openTagFile,
-    openTag,
-    artist, 
+    TagFile,
     album,
+    artist, 
+    audioProperties,
+    bitRate,
+    channels,
     comment,
-    year,
+    duration,
+    open,
+    sampleRate,
+    setArtist,
+    tag,
     title,
-    track
+    track,
+    year
 ) where
 
 import Foreign
@@ -36,8 +44,9 @@ foreign import ccall unsafe "taglib/tag_c.h taglib_tag_comment" taglib_tag_comme
 foreign import ccall unsafe "taglib/tag_c.h taglib_tag_genre" taglib_tag_genre :: (Ptr Void) -> IO UTF8String
 foreign import ccall unsafe "taglib/tag_c.h taglib_tag_year" taglib_tag_year :: (Ptr Void) -> IO CUInt
 foreign import ccall unsafe "taglib/tag_c.h taglib_tag_track" taglib_tag_track :: (Ptr Void) -> IO CUInt
-foreign import ccall unsafe "taglib/tag_c.h taglib_tag_free_strings" taglib_tag_free_strings :: IO ()
+--foreign import ccall unsafe "taglib/tag_c.h taglib_tag_free_strings" taglib_tag_free_strings :: IO ()
 foreign import ccall unsafe "taglib/tag_c.h taglib_file_save" taglib_file_save :: (Ptr Void) -> IO CInt
+foreign import ccall unsafe "taglib/tag_c.h taglib_set_string_management_enabled" taglib_set_string_management_enabled :: CInt -> IO ()
 
 {- Audio properties -}
 foreign import ccall unsafe "taglib/tag_c.h taglib_file_audioproperties" taglib_file_audioproperties :: (Ptr Void) -> IO (Ptr Void)
@@ -47,7 +56,6 @@ foreign import ccall unsafe "taglib/tac_c.h taglib_audioproperties_samplerate" t
 foreign import ccall unsafe "taglib/tac_c.h taglib_audioproperties_channels" taglib_audioproperties_channels :: (Ptr Void) -> IO CInt 
 
 {- Tag Setters -}
-
 foreign import ccall unsafe "taglib/tac_c.h taglib_tag_set_track" taglib_tag_set_track :: (Ptr Void) -> CUInt -> IO () 
 foreign import ccall unsafe "taglib/tac_c.h taglib_tag_set_year" taglib_tag_set_year :: (Ptr Void) -> CUInt -> IO () 
 foreign import ccall unsafe "taglib/tac_c.h taglib_tag_set_genre" taglib_tag_set_genre :: (Ptr Void) -> UTF8String -> IO () 
@@ -55,7 +63,7 @@ foreign import ccall unsafe "taglib/tac_c.h taglib_tag_set_comment" taglib_tag_s
 foreign import ccall unsafe "taglib/tac_c.h taglib_tag_set_album" taglib_tag_set_album :: (Ptr Void) -> UTF8String -> IO () 
 foreign import ccall unsafe "taglib/tac_c.h taglib_tag_set_title" taglib_tag_set_title :: (Ptr Void) -> UTF8String -> IO () 
 foreign import ccall unsafe "taglib/tac_c.h taglib_tag_set_artist" taglib_tag_set_artist :: (Ptr Void) -> UTF8String -> IO () 
---foreign import ccall unsafe "taglib/tac_c.h taglib_id3v2_set_default_text_encoding" taglib_id3v2_set_default_text_encoding :: TagLibID3v2Encoding -> IO () 
+foreign import ccall unsafe "taglib/tac_c.h taglib_id3v2_set_default_text_encoding" taglib_id3v2_set_default_text_encoding :: CUInt -> IO () 
 
 type TagFile = ForeignPtr Void
 
@@ -77,19 +85,23 @@ peekUTF8String utf = do
     bytes <- peekArray0 nullByte utf
     return $ UTF8.decode bytes
 
-openTagFile :: String -> IO (Maybe TagFile)
-openTagFile filename = do 
+no = 0
+yes = 1
+
+open :: String -> IO (Maybe TagFile)
+open filename = do 
+    taglib_set_string_management_enabled no
     ptr <- withUTF8String filename taglib_file_new  
     if ptr == nullPtr 
         then return Nothing
         else do tagFile <- newForeignPtr taglib_file_free ptr
                 return $ Just tagFile
 
-saveTagFile :: TagFile -> IO Int 
-saveTagFile tagFile = liftM fromIntegral $ withForeignPtr tagFile taglib_file_save
+save :: TagFile -> IO Int 
+save tagFile = liftM fromIntegral $ withForeignPtr tagFile taglib_file_save
 
-openTag :: TagFile -> IO (Maybe Tag)
-openTag tagFile = do 
+tag :: TagFile -> IO (Maybe Tag)
+tag tagFile = do 
     tagPtr <- withForeignPtr tagFile taglib_file_tag 
     return  
         (if tagPtr == nullPtr 
@@ -110,8 +122,10 @@ comment = extractTagString taglib_tag_comment
 
 extractTagString :: (Ptr Void -> IO UTF8String) -> Tag -> IO String
 extractTagString taglib_cfunc (Tag tagFile tagPtr) = do
-    s <- taglib_cfunc tagPtr
-    peekUTF8String s
+    cs <- taglib_cfunc tagPtr
+    s <- peekUTF8String cs
+    free cs
+    return s
 
 year :: Tag -> IO Int
 year (Tag tagFile tagPtr) = liftM fromIntegral (taglib_tag_year tagPtr)
@@ -120,8 +134,7 @@ track :: Tag -> IO Int
 track (Tag tagFile tagPtr) = liftM fromIntegral (taglib_tag_track $ tagPtr)
 
 {- Tag Setters -}
-{-
-setTagString f tag val = withUTF8String val $ f $ tPtr tag
+setTagString taglib_cfunc (Tag _ tagPtr) val = withUTF8String val $ taglib_cfunc tagPtr
 
 setTitle :: Tag -> String -> IO () 
 setTitle = setTagString taglib_tag_set_title 
@@ -136,29 +149,24 @@ setComment :: Tag -> String -> IO ()
 setComment = setTagString taglib_tag_set_comment
 
 {- Properties -}
+data AudioProperties = AudioProperties TagFile (Ptr Void)
 
-
-data AudioProperties = AudioProperties { 
-    apPtr :: Ptr Void
-}
-
-getAudioProperties :: TagFile -> IO (Maybe AudioProperties)
-getAudioProperties file = do 
-    ap <- withForeignPtr (fPtr file) taglib_file_audioproperties 
+audioProperties :: TagFile -> IO (Maybe AudioProperties)
+audioProperties tagFile = do 
+    ap <- withForeignPtr tagFile taglib_file_audioproperties 
     return $ (if ap == nullPtr 
                     then Nothing
-                    else Just $ AudioProperties ap)
+                    else Just $ AudioProperties tagFile ap)
 
-length :: AudioProperties -> IO Int
-length prop = liftM fromIntegral  $ taglib_audioproperties_length $ apPtr prop
+-- 'duration' instead of length so that we don't conflict with the Prelude
+duration :: AudioProperties -> IO Int
+duration (AudioProperties _ prop) = liftM fromIntegral $ taglib_audioproperties_length prop
 
-bitrate :: AudioProperties -> IO Int
-bitrate prop = liftM fromIntegral $ taglib_audioproperties_bitrate $ apPtr prop
+bitRate :: AudioProperties -> IO Int
+bitRate (AudioProperties _ prop) = liftM fromIntegral $ taglib_audioproperties_bitrate prop
 
-getChannels :: AudioProperties -> IO Int
-getChannels prop = liftM fromIntegral $ taglib_audioproperties_channels $ apPtr prop
+channels :: AudioProperties -> IO Int
+channels (AudioProperties _ prop) = liftM fromIntegral $ taglib_audioproperties_channels prop
 
-getSampleRate :: AudioProperties -> IO Int
-getSampleRate prop = liftM fromIntegral $ taglib_audioproperties_samplerate $ apPtr prop
--}
-
+sampleRate :: AudioProperties -> IO Int
+sampleRate (AudioProperties _ prop) = liftM fromIntegral $ taglib_audioproperties_samplerate prop
