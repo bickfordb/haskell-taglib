@@ -33,6 +33,7 @@ module Sound.TagLib (
     setArtist,
     setComment,
     setGenre,
+    setTitle,
     setTrack,
     setYear,
     title,
