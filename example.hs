@@ -1,9 +1,8 @@
 module Main where 
 
 import qualified Sound.TagLib as TagLib
-import Data.Maybe
-import Control.Monad
-import System
+import Control.Monad (mapM)
+import System.Environment (getArgs)
 
 main = do
     args <- getArgs 
