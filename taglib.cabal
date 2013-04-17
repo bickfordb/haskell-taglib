@@ -1,7 +1,7 @@
 Author:         Brandon Bickford
 Maintainer:     Brandon Bickford <bickfordb@gmail.com>
 Name:           taglib
-Version:        0.1.1
+Version:        0.2.0
 Cabal-Version:  >= 1.2
 License:        LGPL
 License-File:   LICENSE
