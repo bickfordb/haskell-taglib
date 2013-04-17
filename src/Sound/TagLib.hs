@@ -22,6 +22,7 @@ module Sound.TagLib (
     -- * TagFile operations
     open,
     save,
+    close,
     
     -- * Tag Operations
     tag,
@@ -136,6 +137,9 @@ open filename = do
 -- |Save changes to a tag
 save :: TagFile -> IO Integer 
 save tagFile = liftM fromIntegral $ withForeignPtr tagFile taglib_file_save
+
+close :: TagFile -> IO ()
+close tagFile = finalizeForeignPtr tagFile
 
 -- |Get a Tag from a TagFile, if it has one
 tag :: TagFile -> IO (Maybe Tag)
